@@ -1,0 +1,868 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mac Pulse</title>
+<style>
+:root {
+  color-scheme: light;
+  --bg: #f4f4f2;
+  --card: #ffffff;
+  --line: #e4e4e0;
+  --line-soft: #efefec;
+  --ink: #161615;
+  --ink-2: #52514e;
+  --ink-3: #8a8984;
+  --track: #ededea;
+  --accent: #2a78d6;
+  --good: #0ca30c;
+  --good-ink: #1f7a35;
+  --good-bg: #e6f5e8;
+  --warn: #fab219;
+  --warn-ink: #9a5b00;
+  --warn-bg: #fdf1dc;
+  --crit: #d03b3b;
+  --hatch-a: #cfead6;
+  --hatch-b: #effaf1;
+  --hatch-line: #4aa864;
+  --c-browsers: #2a78d6; --f-browsers: #e3edfb;
+  --c-comms: #eb6834;    --f-comms: #fde8de;
+  --c-media: #1baf7a;    --f-media: #def5ec;
+  --c-other: #eda100;    --f-other: #fcf1d6;
+  --c-ai: #e87ba4;       --f-ai: #fce6ee;
+  --c-dev: #6250d6;      --f-dev: #e8e5fb;
+  --c-system: #9a9a95;   --f-system: #efefed;
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --bg: #111110;
+    --card: #1a1a19;
+    --line: #2d2d2b;
+    --line-soft: #252523;
+    --ink: #f0efec;
+    --ink-2: #c3c2b7;
+    --ink-3: #8c8b84;
+    --track: #2a2a28;
+    --accent: #3987e5;
+    --good-ink: #5fd06f;
+    --good-bg: #16301b;
+    --warn-ink: #f5c25b;
+    --warn-bg: #33270f;
+    --hatch-a: #1f4a2a;
+    --hatch-b: #16261a;
+    --hatch-line: #4cbc66;
+    --c-browsers: #3987e5; --f-browsers: #1b2a3f;
+    --c-comms: #d95926;    --f-comms: #3a2219;
+    --c-media: #199e70;    --f-media: #14302a;
+    --c-other: #c98500;    --f-other: #352a12;
+    --c-ai: #d55181;       --f-ai: #3a1d29;
+    --c-dev: #9085e9;      --f-dev: #26223f;
+    --c-system: #77766f;   --f-system: #262624;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 var(--sans); }
+body { padding: 20px; min-width: 1060px; }
+.mono { font-family: var(--mono); }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 5px; }
+button { font: inherit; color: inherit; cursor: pointer; }
+
+.top { display: flex; align-items: center; gap: 14px; margin: 0 2px 14px; }
+.top h1 { font-size: 17px; margin: 0; letter-spacing: -0.01em; }
+.top .meta { color: var(--ink-3); font-size: 13px; }
+.top .spacer { flex: 1; }
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 5px; font-size: 12px; border: 1px solid var(--line); background: var(--card); color: var(--ink-2); }
+.dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex: none; }
+.live .dot { background: var(--good); box-shadow: 0 0 0 3px color-mix(in srgb, var(--good) 22%, transparent); }
+.paused .dot { background: var(--ink-3); }
+
+.kpis { display: grid; grid-template-columns: repeat(4, 1fr); overflow: hidden; }
+.kpi { padding: 16px 20px 18px; border-left: 1px solid var(--line); }
+.kpi:first-child { border-left: 0; }
+.kpi .label { color: var(--ink-2); font-size: 13px; display: flex; align-items: center; gap: 6px; }
+.kpi .value { margin-top: 6px; font: 600 26px/1.1 var(--mono); letter-spacing: -0.02em; }
+.kpi .value small { font: 400 13px var(--mono); color: var(--ink-3); margin-left: 6px; letter-spacing: 0; white-space: nowrap; }
+.kpi .value small.up { color: var(--good-ink); }
+
+.vitals { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin: 12px 0; }
+.vital { padding: 14px 16px 12px; position: relative; min-height: 164px; display: flex; flex-direction: column; }
+.vital h3 { margin: 0; font-size: 13px; font-weight: 500; color: var(--ink-2); display: flex; justify-content: space-between; align-items: center; }
+.vital .big { font: 600 22px/1.15 var(--mono); margin-top: 6px; letter-spacing: -0.02em; }
+.vital .big small { font: 400 12px var(--mono); color: var(--ink-3); letter-spacing: 0; }
+.vital .sub { color: var(--ink-3); font-size: 12px; margin-top: 2px; font-family: var(--mono); }
+.vital .foot { margin-top: auto; }
+.status { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; padding: 2px 8px; border-radius: 5px; font-weight: 500; }
+.status.good { background: var(--good-bg); color: var(--good-ink); }
+.status.warn { background: var(--warn-bg); color: var(--warn-ink); }
+.status.crit { background: color-mix(in srgb, var(--crit) 14%, transparent); color: var(--crit); }
+.stack { display: flex; gap: 2px; height: 10px; margin-top: 10px; }
+.stack span { border-radius: 5px; min-width: 2px; }
+.keys { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px; margin-top: 8px; font-size: 11.5px; color: var(--ink-2); }
+.keys div { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+.keys b { font: 500 11.5px var(--mono); margin-left: auto; color: var(--ink); }
+.cores { display: flex; align-items: flex-end; gap: 3px; height: 46px; margin-top: 10px; }
+.cores span { flex: 1; background: var(--track); border-radius: 5px; position: relative; height: 100%; }
+.cores span i { position: absolute; left: 0; right: 0; bottom: 0; border-radius: 5px; background: var(--accent); }
+.bar { height: 8px; border-radius: 5px; background: var(--track); overflow: hidden; margin-top: 10px; }
+.bar i { display: block; height: 100%; border-radius: 5px; background: var(--accent); }
+.spark { width: 100%; height: 44px; display: block; margin-top: 8px; overflow: visible; }
+.spark .area { opacity: .12; }
+.spark .ln { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.spark-read { position: absolute; top: 12px; right: 14px; font: 11px var(--mono); color: var(--ink-2); background: var(--card); padding: 1px 4px; border-radius: 5px; pointer-events: none; }
+.rates { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px; }
+.rates div { font: 600 15px/1.2 var(--mono); white-space: nowrap; }
+.rates div small { display: block; font: 400 11.5px var(--sans); color: var(--ink-3); }
+
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 14px; align-items: start; }
+.panel-head { display: flex; align-items: flex-start; justify-content: space-between; padding: 16px 18px 12px; gap: 12px; }
+.panel-head h2 { margin: 0; font-size: 15px; }
+.panel-head p { margin: 2px 0 0; color: var(--ink-3); font-size: 13px; }
+.controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.seg { display: inline-flex; background: var(--track); border-radius: 5px; padding: 3px; }
+.seg button { border: 0; background: transparent; padding: 4px 11px; border-radius: 5px; font-size: 13px; color: var(--ink-2); }
+.seg button.on { background: var(--card); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.12); font-weight: 500; }
+
+.crumbs { display: flex; justify-content: space-between; align-items: center; padding: 8px 18px; border-top: 1px solid var(--line-soft); color: var(--ink-2); font-size: 13px; }
+.crumbs a { color: var(--ink-2); cursor: pointer; text-decoration: none; }
+.crumbs a:hover { color: var(--ink); text-decoration: underline; }
+.crumbs .sep { color: var(--ink-3); margin: 0 6px; }
+.map { position: relative; height: 620px; margin: 0 14px; }
+.tile { position: absolute; border-radius: 5px; border: 1px solid; overflow: hidden; cursor: pointer; transition: filter .12s; }
+.tile:hover { filter: brightness(0.97) saturate(1.08); }
+.tile.box { cursor: default; }
+.tile.box:hover { filter: none; }
+.tile .hd { position: absolute; left: 10px; right: 10px; top: 7px; display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px; white-space: nowrap; }
+.tile.box > .hd { cursor: pointer; font-weight: 500; }
+.tile .hd span:first-child { overflow: hidden; text-overflow: ellipsis; }
+.tile .hd .v { font-family: var(--mono); color: var(--ink-3); font-size: 11.5px; font-weight: 400; }
+.tile .val { position: absolute; left: 9px; bottom: 6px; font-family: var(--mono); font-weight: 600; letter-spacing: -0.02em; white-space: nowrap; }
+.tile.ghost { border-radius: 5px; cursor: inherit; pointer-events: none; opacity: .55; }
+.tile.hatch { background: repeating-linear-gradient(135deg, var(--hatch-a) 0 2px, var(--hatch-b) 2px 9px) !important; border-color: var(--hatch-line) !important; }
+.tile.flash { animation: flash 1.2s ease-out; }
+@keyframes flash { 0%,40% { box-shadow: 0 0 0 3px var(--ink); } 100% { box-shadow: 0 0 0 0 transparent; } }
+.legend { display: flex; gap: 18px; flex-wrap: wrap; padding: 12px 18px 16px; color: var(--ink-2); font-size: 12.5px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend .sw { width: 9px; height: 9px; border-radius: 5px; }
+.legend .hs { width: 14px; height: 10px; border-radius: 5px; border: 1px solid var(--hatch-line); background: repeating-linear-gradient(135deg, var(--hatch-a) 0 2px, var(--hatch-b) 2px 5px); }
+.empty { position: absolute; inset: 0; display: grid; place-items: center; color: var(--ink-3); }
+
+table.list { width: calc(100% - 28px); margin: 0 14px; border-collapse: collapse; font-size: 13px; }
+.list-wrap { height: 620px; overflow: auto; }
+table.list th { position: sticky; top: 0; background: var(--card); text-align: left; font-weight: 500; color: var(--ink-3); padding: 8px 8px; border-bottom: 1px solid var(--line); font-size: 12px; }
+table.list td { padding: 7px 8px; border-bottom: 1px solid var(--line-soft); }
+table.list td.n, table.list th.n { text-align: right; font-family: var(--mono); }
+table.list tr { cursor: pointer; }
+table.list tbody tr:hover { background: var(--line-soft); }
+
+.recs { position: sticky; top: 14px; display: flex; flex-direction: column; max-height: calc(100vh - 28px); }
+.recs .scroll { overflow: auto; border-top: 1px solid var(--line-soft); }
+.sec { display: flex; justify-content: space-between; align-items: center; padding: 10px 18px 6px; }
+.tag { font-size: 12px; padding: 2px 9px; border-radius: 5px; font-weight: 500; }
+.tag.safe { background: var(--good-bg); color: var(--good-ink); }
+.tag.review { background: var(--warn-bg); color: var(--warn-ink); }
+.sec .tot { font: 12.5px var(--mono); color: var(--ink-2); }
+.row { display: grid; grid-template-columns: 22px 1fr auto 14px; gap: 12px; align-items: center; padding: 10px 18px; border-top: 1px solid var(--line-soft); cursor: pointer; }
+.row:hover { background: var(--line-soft); }
+.row .t { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row .s { font: 11.5px var(--mono); color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row .r { font-size: 12px; color: var(--ink-2); margin-top: 1px; }
+.row .m { font: 600 13.5px var(--mono); text-align: right; }
+.row .m small { display: block; font: 400 11px var(--mono); color: var(--ink-3); }
+.row .chev { color: var(--ink-3); }
+.check { width: 18px; height: 18px; border-radius: 5px; border: 1.5px solid var(--ink-3); display: grid; place-items: center; background: var(--card); }
+.check.on { background: var(--ink); border-color: var(--ink); }
+.check.on::after { content: ""; width: 9px; height: 5px; border: 2px solid var(--card); border-top: 0; border-right: 0; transform: rotate(-45deg) translate(1px, -1px); }
+.none { padding: 10px 18px 14px; color: var(--ink-3); font-size: 13px; }
+.recs .bottom { border-top: 1px solid var(--line); padding: 12px 18px 16px; }
+.recs .bottom .sel { font-size: 13px; color: var(--ink-2); margin-bottom: 10px; }
+.recs .bottom .sel b { font-family: var(--mono); color: var(--ink); }
+.btns { display: flex; gap: 8px; }
+.btn { border: 1px solid var(--line); background: var(--card); padding: 7px 13px; border-radius: 5px; font-size: 13px; font-weight: 500; }
+.btn.dark { background: var(--ink); color: var(--card); border-color: var(--ink); }
+.btn:disabled { opacity: .45; cursor: default; }
+
+#tip { position: fixed; pointer-events: none; z-index: 20; background: var(--ink); color: var(--card); border-radius: 5px; padding: 9px 11px; font-size: 12px; max-width: 360px; box-shadow: 0 8px 24px rgba(0,0,0,.18); display: none; }
+#tip .tt { font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+#tip .kv { display: grid; grid-template-columns: auto 1fr; gap: 1px 12px; font-family: var(--mono); font-size: 11.5px; }
+#tip .kv span:nth-child(odd) { opacity: .65; font-family: var(--sans); }
+#tip .path { margin-top: 5px; opacity: .6; font: 10.5px var(--mono); word-break: break-all; }
+#toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--card); padding: 9px 16px; border-radius: 5px; font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 30; }
+#modal { position: fixed; inset: 0; background: rgba(0,0,0,.35); display: none; place-items: center; z-index: 40; }
+#modal .card { width: min(760px, 90vw); padding: 16px; }
+#modal textarea { width: 100%; height: 300px; font: 12px var(--mono); border: 1px solid var(--line); border-radius: 5px; padding: 10px; background: var(--bg); color: var(--ink); resize: vertical; }
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>Mac Pulse</h1>
+  <span class="meta" id="hostMeta"></span>
+  <span class="spacer"></span>
+  <span class="meta mono" id="updated"></span>
+  <button class="pill live" id="liveBtn"><span class="dot"></span><span id="liveTxt">Live</span></button>
+</header>
+
+<section class="card kpis" id="kpis"></section>
+<section class="vitals" id="vitals"></section>
+
+<main class="grid">
+  <section class="card">
+    <div class="panel-head">
+      <div>
+        <h2>Explorer</h2>
+        <p id="explorerSub">Every running app, sized by memory. Click a tile to open it.</p>
+      </div>
+      <div class="controls">
+        <div class="seg" data-key="metric"><button data-v="mem" class="on">Memory</button><button data-v="cpu">CPU</button></div>
+        <div class="seg" data-key="color"><button data-v="cat" class="on">Category</button><button data-v="cleanup">Cleanup</button></div>
+        <div class="seg" data-key="view"><button data-v="map" class="on">Map</button><button data-v="table">Table</button></div>
+      </div>
+    </div>
+    <div class="crumbs"><div id="crumbs"></div><div class="mono" id="crumbTotal"></div></div>
+    <div class="map" id="map" role="img" aria-label="Treemap of running apps"></div>
+    <div class="list-wrap" id="tableWrap" hidden><table class="list" id="table"></table></div>
+    <div class="legend" id="legend"></div>
+  </section>
+
+  <aside class="card recs">
+    <div class="panel-head" style="padding-bottom:10px">
+      <div><h2>Recommendations</h2><p>Select items to build a cleanup script</p></div>
+    </div>
+    <div class="scroll" id="recList"></div>
+    <div class="bottom">
+      <div class="sel" id="selSummary"></div>
+      <div class="btns">
+        <button class="btn" id="selSafe">Select safe</button>
+        <button class="btn" id="selNone">Clear</button>
+        <span style="flex:1"></span>
+        <button class="btn dark" id="copyBtn">Copy script</button>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<div id="tip"></div>
+<div id="toast"></div>
+<div id="modal"><div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+    <b>Cleanup script</b><button class="btn" id="modalClose">Close</button>
+  </div>
+  <textarea id="modalText" readonly></textarea>
+</div></div>
+
+<script>
+const EMBEDDED = /*__MACPULSE_DATA__*/null;
+
+const CATS = [
+  { id: "browsers", label: "Browsers" },
+  { id: "comms", label: "Communication" },
+  { id: "media", label: "Media & design" },
+  { id: "other", label: "Other apps" },
+  { id: "ai", label: "AI & agents" },
+  { id: "dev", label: "Dev tools & terminals" },
+  { id: "system", label: "macOS & services" },
+];
+const CAT_LABEL = Object.fromEntries(CATS.map(c => [c.id, c.label]));
+
+const state = {
+  data: EMBEDDED,
+  metric: "mem",
+  color: "cat",
+  view: "map",
+  path: [],
+  selected: new Set(JSON.parse(localStorage.getItem("macpulse.selected") || "[]")),
+  seen: new Set(JSON.parse(localStorage.getItem("macpulse.seen") || "[]")),
+  auto: new Set(JSON.parse(localStorage.getItem("macpulse.auto") || "[]")),
+  paused: false,
+};
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+function fmtBytes(b, digits) {
+  if (b == null) return "–";
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let i = 0;
+  while (b >= 1024 && i < units.length - 1) { b /= 1024; i++; }
+  const d = digits ?? (b >= 100 || i < 2 ? 0 : 1);
+  return `${b.toFixed(d)} ${units[i]}`;
+}
+const fmtRate = b => `${fmtBytes(b, b >= 1024 ** 2 ? 1 : 0)}/s`;
+const fmtPct = p => `${p >= 10 ? Math.round(p) : (Math.round(p * 10) / 10)}%`;
+const fmtMetric = (v, metric) => metric === "mem" ? fmtBytes(v) : fmtPct(v);
+function fmtDuration(sec) {
+  const d = Math.floor(sec / 86400), h = Math.floor(sec % 86400 / 3600), m = Math.floor(sec % 3600 / 60);
+  return d ? `${d}d ${h}h` : h ? `${h}h ${m}m` : `${m}m`;
+}
+const catVar = (cat, kind) => `var(--${kind}-${cat})`;
+
+function persist() {
+  localStorage.setItem("macpulse.selected", JSON.stringify([...state.selected]));
+  localStorage.setItem("macpulse.seen", JSON.stringify([...state.seen]));
+  localStorage.setItem("macpulse.auto", JSON.stringify([...state.auto]));
+}
+
+function syncSelection() {
+  for (const r of state.data.recs) {
+    if (!state.seen.has(r.id)) {
+      state.seen.add(r.id);
+      if (r.section === "safe") { state.selected.add(r.id); state.auto.add(r.id); }
+    } else if (r.section !== "safe" && state.auto.has(r.id)) {
+      state.selected.delete(r.id);
+      state.auto.delete(r.id);
+    }
+  }
+  persist();
+}
+
+function recIndex() {
+  const byGroup = new Map(), byPid = new Map(), byId = new Map();
+  for (const r of state.data.recs) {
+    byId.set(r.id, r);
+    if (r.pid) byPid.set(r.pid, r); else byGroup.set(r.groupId, r);
+  }
+  return { byGroup, byPid, byId };
+}
+
+function selectedRecs() {
+  return state.data.recs.filter(r => state.selected.has(r.id));
+}
+
+function renderHeader() {
+  const { host, procs, ts, live } = state.data;
+  const perf = host.perf.map(p => `${p.count} ${p.name}`).join(" + ");
+  $("hostMeta").textContent = `${host.chip} · ${host.cores} cores (${perf}) · ${fmtBytes(state.data.mem.total)} · macOS ${host.os} · up ${fmtDuration(ts - host.boot)} · ${procs.count} processes · ${procs.threads.toLocaleString()} threads`;
+  $("updated").textContent = new Date(ts * 1000).toLocaleTimeString();
+  const btn = $("liveBtn");
+  if (!live) {
+    btn.className = "pill paused"; $("liveTxt").textContent = "Snapshot"; btn.disabled = true;
+  } else {
+    btn.className = `pill ${state.paused ? "paused" : "live"}`;
+    $("liveTxt").textContent = state.paused ? "Paused" : "Live";
+  }
+}
+
+function renderKpis() {
+  const { mem, cpu } = state.data;
+  const sel = selectedRecs();
+  const freed = sel.reduce((s, r) => s + r.mem, 0);
+  const available = mem.total - mem.used;
+  const safe = state.data.recs.filter(r => r.section === "safe");
+  const review = state.data.recs.filter(r => r.section === "review");
+  const sum = list => list.reduce((s, r) => s + r.mem, 0);
+  const sysMem = state.data.groups.filter(g => g.system).reduce((s, g) => s + g.mem, 0);
+  $("kpis").innerHTML = `
+    <div class="kpi"><div class="label">Available after cleanup</div>
+      <div class="value">${fmtBytes(available + freed, 1)}<small class="up">+${fmtBytes(freed, 1)}</small></div></div>
+    <div class="kpi"><div class="label"><span class="dot" style="background:var(--good)"></span>Safe to quit</div>
+      <div class="value">${fmtBytes(sum(safe), 1)}<small>${safe.length} item${safe.length === 1 ? "" : "s"}</small></div></div>
+    <div class="kpi"><div class="label"><span class="dot" style="background:var(--warn)"></span>Needs review</div>
+      <div class="value">${fmtBytes(sum(review), 1)}<small>${review.length} item${review.length === 1 ? "" : "s"}</small></div></div>
+    <div class="kpi"><div class="label">macOS & kernel</div>
+      <div class="value">${fmtBytes(sysMem + mem.wired, 1)}<small>services + wired</small></div></div>`;
+}
+
+function spark(values, color, fmt) {
+  const pts = values.filter(v => v != null);
+  if (pts.length < 2) return "";
+  const max = Math.max(...pts, 1e-9), w = 200, h = 44;
+  const xy = values.map((v, i) => [i / (values.length - 1) * w, h - 2 - (v ?? 0) / max * (h - 6)]);
+  const line = xy.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(1)},${y.toFixed(1)}`).join("");
+  const data = esc(JSON.stringify(values.map(fmt)));
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" data-vals="${data}">
+    <path class="area" d="${line}L${w},${h}L0,${h}Z" fill="${color}"/>
+    <path class="ln" d="${line}" stroke="${color}" vector-effect="non-scaling-stroke"/>
+  </svg>`;
+}
+
+function statusPill(level) {
+  const map = { normal: ["good", "●", "Normal"], warning: ["warn", "▲", "Warning"], critical: ["crit", "■", "Critical"] };
+  const [cls, icon, label] = map[level] || map.normal;
+  return `<span class="status ${cls}">${icon} ${label}</span>`;
+}
+
+function renderVitals() {
+  const { mem, cpu, gpu, disk, net, battery, history = [] } = state.data;
+  const hist = key => history.map(h => h[key]);
+  const segs = [
+    ["App", mem.app, "var(--c-dev)"], ["Wired", mem.wired, "var(--c-ai)"],
+    ["Compressed", mem.compressed, "var(--c-comms)"], ["Cached files", mem.cached, "var(--c-media)"],
+    ["Free", mem.free, "var(--track)"],
+  ];
+  const memCard = `<div class="card vital">
+    <h3>Memory ${statusPill(mem.pressure)}</h3>
+    <div class="big">${fmtBytes(mem.used, 1)}</div>
+    <div class="sub">used of ${fmtBytes(mem.total)} · swap ${fmtBytes(mem.swapUsed)}</div>
+    <div class="stack">${segs.map(([l, v, c]) => `<span title="${l} ${fmtBytes(v, 1)}" style="flex:${v};background:${c}"></span>`).join("")}</div>
+    <div class="keys">${segs.map(([l, v, c]) => `<div><span class="dot" style="background:${c};border-radius: 5px"></span>${l}<b>${fmtBytes(v, 1)}</b></div>`).join("")}</div>
+  </div>`;
+
+  const cpuCard = `<div class="card vital">
+    <h3>CPU <span class="sub" style="margin:0">load ${cpu.load.join(" ")}</span></h3>
+    <div class="big">${fmtPct(cpu.total)}</div>
+    <div class="sub">user ${fmtPct(cpu.user)} · sys ${fmtPct(cpu.sys)} · ${cpu.thermal}</div>
+    <div class="cores" title="Per-core load">${cpu.cores.map((c, i) => `<span title="core ${i}: ${fmtPct(c)}"><i style="height:${Math.max(c, 1.5)}%"></i></span>`).join("")}</div>
+    <div class="foot">${spark(hist("cpu"), "var(--accent)", fmtPct)}</div>
+  </div>`;
+
+  const gpuCard = gpu ? `<div class="card vital">
+    <h3>GPU</h3>
+    <div class="big">${fmtPct(gpu.util)}</div>
+    <div class="sub">${fmtBytes(gpu.inUse)} in use of ${fmtBytes(gpu.alloc, 1)} allocated</div>
+    <div class="bar"><i style="width:${gpu.util}%"></i></div>
+    <div class="foot">${spark(hist("gpu"), "var(--accent)", fmtPct)}</div>
+  </div>` : `<div class="card vital"><h3>GPU</h3><div class="sub">No GPU statistics</div></div>`;
+
+  const used = disk.total - disk.free;
+  const diskCard = `<div class="card vital">
+    <h3>Disk</h3>
+    <div class="big">${fmtBytes(disk.free)}</div>
+    <div class="sub">free of ${fmtBytes(disk.total)}</div>
+    <div class="bar"><i style="width:${used / disk.total * 100}%"></i></div>
+    <div class="rates"><div>${fmtRate(disk.readRate)}<small>read</small></div><div>${fmtRate(disk.writeRate)}<small>write</small></div></div>
+    <div class="foot">${spark(history.map(h => h.diskR + h.diskW), "var(--accent)", fmtRate)}</div>
+  </div>`;
+
+  const netCard = `<div class="card vital">
+    <h3>Network <span class="sub" style="margin:0">Wi-Fi & Ethernet</span></h3>
+    <div class="rates" style="margin-top:8px"><div>${fmtRate(net.inRate)}<small>↓ download</small></div><div>${fmtRate(net.outRate)}<small>↑ upload</small></div></div>
+    <div class="sub" style="margin-top:6px">since boot ↓ ${fmtBytes(net.inTotal, 1)} · ↑ ${fmtBytes(net.outTotal, 1)}</div>
+    <div class="foot">${spark(hist("netIn"), "var(--accent)", fmtRate)}</div>
+  </div>`;
+
+  let batCard = `<div class="card vital"><h3>Power</h3><div class="sub">No battery</div></div>`;
+  if (battery) {
+    const stateTxt = battery.charging ? "charging" : battery.plugged ? "plugged in" : "on battery";
+    const left = battery.minutesLeft ? ` · ${Math.floor(battery.minutesLeft / 60)}:${String(battery.minutesLeft % 60).padStart(2, "0")} left` : "";
+    const healthLevel = battery.health == null ? "normal" : battery.health >= 80 ? "normal" : battery.health >= 70 ? "warning" : "critical";
+    batCard = `<div class="card vital">
+      <h3>Battery <span class="status ${healthLevel === "normal" ? "good" : healthLevel === "warning" ? "warn" : "crit"}">${healthLevel === "normal" ? "●" : "▲"} ${battery.health ?? "–"}% health</span></h3>
+      <div class="big">${battery.percent}%</div>
+      <div class="sub">${stateTxt}${left}</div>
+      <div class="bar"><i style="width:${battery.percent}%;background:${battery.percent <= 20 ? "var(--crit)" : "var(--good)"}"></i></div>
+      <div class="keys" style="grid-template-columns:1fr">
+        <div>Power draw<b>${battery.watts} W</b></div>
+        <div>Cycles<b>${battery.cycles}</b></div>
+        <div>Capacity<b>${battery.fullMah ?? "–"} / ${battery.designMah ?? "–"} mAh</b></div>
+      </div>
+    </div>`;
+  }
+  $("vitals").innerHTML = memCard + cpuCard + gpuCard + diskCard + netCard + batCard;
+}
+
+function buildTree() {
+  const { metric } = state;
+  const groups = state.data.groups;
+  const byCat = new Map(CATS.map(c => [c.id, []]));
+  for (const g of groups) (byCat.get(g.cat) || byCat.get("other")).push(g);
+  const nodeOfGroup = g => ({
+    key: g.id, name: g.name, cat: g.cat, group: g, value: g[metric],
+    children: g.procs.map(p => ({ key: `p${p.pid}`, name: p.name, cat: g.cat, group: g, proc: p, value: p[metric] })),
+  });
+  const children = CATS.map(c => ({
+    key: `cat:${c.id}`, name: c.label, cat: c.id, catId: c.id,
+    children: byCat.get(c.id).map(nodeOfGroup),
+  })).map(n => ({ ...n, value: n.children.reduce((s, x) => s + x.value, 0) }));
+  return { key: "root", name: "This Mac", children, value: children.reduce((s, x) => s + x.value, 0) };
+}
+
+function currentNode(tree) {
+  let node = tree;
+  const trail = [tree];
+  for (const key of state.path) {
+    const next = (node.children || []).find(c => c.key === key);
+    if (!next) break;
+    node = next; trail.push(node);
+  }
+  state.path = trail.slice(1).map(n => n.key);
+  return { node, trail };
+}
+
+function fold(children, total, maxItems) {
+  const items = children.filter(c => c.value > 0).sort((a, b) => b.value - a.value);
+  const keep = [], rest = [];
+  for (const c of items) (keep.length < maxItems && c.value / total >= 0.004 ? keep : rest).push(c);
+  if (rest.length) {
+    const value = rest.reduce((s, c) => s + c.value, 0);
+    keep.push({ key: `more:${rest[0].key}`, name: `${rest.length} smaller`, cat: rest[0].cat, value, more: rest, children: rest });
+  }
+  return keep;
+}
+
+function squarify(items, x, y, w, h) {
+  const total = items.reduce((s, i) => s + i.value, 0);
+  if (!total || w <= 0 || h <= 0) return [];
+  const scale = w * h / total;
+  const nodes = items.map(i => ({ item: i, area: i.value * scale }));
+  const out = [];
+  let row = [];
+  const worst = (r, side) => {
+    const s = r.reduce((a, n) => a + n.area, 0);
+    let max = 0, min = Infinity;
+    for (const n of r) { max = Math.max(max, n.area); min = Math.min(min, n.area); }
+    return Math.max(side * side * max / (s * s), s * s / (side * side * min));
+  };
+  const flush = () => {
+    const s = row.reduce((a, n) => a + n.area, 0);
+    if (w >= h) {
+      const cw = s / h; let cy = y;
+      for (const n of row) { const ch = n.area / cw; out.push({ item: n.item, x, y: cy, w: cw, h: ch }); cy += ch; }
+      x += cw; w -= cw;
+    } else {
+      const ch = s / w; let cx = x;
+      for (const n of row) { const cw = n.area / ch; out.push({ item: n.item, x: cx, y, w: cw, h: ch }); cx += cw; }
+      y += ch; h -= ch;
+    }
+    row = [];
+  };
+  for (const n of nodes) {
+    const side = Math.min(w, h);
+    if (!row.length || worst([...row, n], side) <= worst(row, side)) row.push(n);
+    else { flush(); row.push(n); }
+  }
+  if (row.length) flush();
+  return out;
+}
+
+let tileIndex = new Map();
+let recs = { byGroup: new Map(), byPid: new Map(), byId: new Map() };
+
+function recFor(node) {
+  if (node.proc) return recs.byPid.get(node.proc.pid) || recs.byGroup.get(node.group.id);
+  if (node.group) return recs.byGroup.get(node.group.id);
+  return null;
+}
+
+function paint(node) {
+  const rec = recFor(node);
+  const hatch = rec && state.selected.has(rec.id);
+  if (state.color === "cleanup") {
+    if (rec?.section === "safe") return { fill: "var(--good-bg)", line: "var(--hatch-line)", hatch };
+    if (rec?.section === "review") return { fill: "var(--warn-bg)", line: "var(--warn)", hatch };
+    return { fill: "var(--f-system)", line: "color-mix(in srgb, var(--c-system) 55%, transparent)", hatch };
+  }
+  return { fill: catVar(node.cat, "f"), line: `color-mix(in srgb, ${catVar(node.cat, "c")} 60%, transparent)`, hatch };
+}
+
+function drawTile(parent, node, r, depth, ghosts) {
+  const gap = 2;
+  const x = r.x + gap, y = r.y + gap, w = r.w - gap * 2, h = r.h - gap * 2;
+  if (w < 3 || h < 3) return;
+  const el = document.createElement("div");
+  const { fill, line, hatch } = paint(node);
+  el.className = "tile" + (hatch ? " hatch" : "");
+  Object.assign(el.style, { left: `${x}px`, top: `${y}px`, width: `${w}px`, height: `${h}px`, background: fill, borderColor: line });
+  el.dataset.key = node.key;
+  tileIndex.set(node.key, node);
+  parent.appendChild(el);
+
+  const canBox = depth > 0 && node.children?.length && w > 110 && h > 80;
+  const label = `<span>${esc(node.name)}</span>`;
+  if (canBox) {
+    el.classList.add("box");
+    el.innerHTML = `<div class="hd" data-key="${esc(node.key)}">${label}<span class="v">${fmtMetric(node.value, state.metric)}</span></div>`;
+    const total = node.value;
+    const kids = fold(node.children, total, 28);
+    for (const c of squarify(kids, 6, 28, w - 12, h - 34)) drawTile(el, c.item, c, depth - 1, true);
+    return;
+  }
+  if (w > 46 && h > 24) el.innerHTML = `<div class="hd">${label}</div>`;
+  const size = Math.max(12, Math.min(26, Math.sqrt(w * h) / 8.5));
+  if (w > 70 && h > 54) {
+    const v = document.createElement("div");
+    v.className = "val";
+    v.style.fontSize = `${size}px`;
+    v.textContent = fmtMetric(node.value, state.metric);
+    el.appendChild(v);
+  }
+  if (ghosts && node.children?.length > 1 && w > 100 && h > 110) {
+    const top = 30, bottom = size + 16;
+    const kids = fold(node.children, node.value, 14);
+    for (const c of squarify(kids, 6, top, w - 12, h - top - bottom)) {
+      const g = document.createElement("div");
+      const p = paint(c.item);
+      g.className = "tile ghost" + (p.hatch ? " hatch" : "");
+      Object.assign(g.style, { left: `${c.x + 2}px`, top: `${c.y + 2}px`, width: `${Math.max(c.w - 4, 0)}px`, height: `${Math.max(c.h - 4, 0)}px`, background: "var(--card)", borderColor: p.line });
+      el.appendChild(g);
+    }
+  }
+}
+
+function renderExplorer() {
+  const tree = buildTree();
+  const { node, trail } = currentNode(tree);
+  $("crumbs").innerHTML = trail.map((n, i) => i === trail.length - 1
+    ? `<span>${i === 0 ? "~ " : ""}${esc(n.name)}</span>`
+    : `<a data-depth="${i}">${i === 0 ? "~ " : ""}${esc(n.name)}</a><span class="sep">›</span>`).join("");
+  $("crumbTotal").textContent = state.metric === "cpu" && !state.path.length
+    ? `${fmtPct(node.value)} of ${state.data.host.cores * 100}%`
+    : fmtMetric(node.value, state.metric);
+  $("explorerSub").textContent = state.metric === "mem"
+    ? "Every running app, sized by memory footprint. Click a tile to open it."
+    : "Every running app, sized by CPU right now (100% = one core). Click a tile to open it.";
+
+  const map = $("map");
+  tileIndex = new Map();
+  map.innerHTML = "";
+  $("map").hidden = state.view !== "map";
+  $("tableWrap").hidden = state.view !== "table";
+
+  const kids = fold(node.children || [], node.value || 1, 40);
+  if (state.view === "map") {
+    const { width, height } = map.getBoundingClientRect();
+    if (!kids.length) map.innerHTML = `<div class="empty">Nothing above zero here right now.</div>`;
+    const depth = node.proc ? 0 : 1;
+    for (const r of squarify(kids, 0, 0, width, height)) drawTile(map, r.item, r, depth, true);
+  } else {
+    renderTable(node);
+  }
+  renderLegend();
+}
+
+function renderTable(node) {
+  const rows = (node.children || []).slice().sort((a, b) => b.value - a.value);
+  const isProc = rows[0]?.proc;
+  const head = isProc
+    ? `<tr><th>Process</th><th class="n">PID</th><th class="n">Memory</th><th class="n">CPU</th><th>Status</th></tr>`
+    : `<tr><th>Name</th><th>Category</th><th class="n">Procs</th><th class="n">Memory</th><th class="n">CPU</th><th>Status</th></tr>`;
+  const status = n => {
+    const r = recFor(n);
+    if (!r) return "";
+    return `<span class="tag ${r.section}">${r.section === "safe" ? "Safe to quit" : "Review"}</span>`;
+  };
+  const body = rows.map(n => {
+    if (n.proc) return `<tr data-key="${esc(n.key)}"><td>${esc(n.name)}</td><td class="n">${n.proc.pid}</td><td class="n">${fmtBytes(n.proc.mem)}</td><td class="n">${fmtPct(n.proc.cpu)}</td><td>${status(n)}</td></tr>`;
+    const mem = n.group ? n.group.mem : n.children.reduce((s, c) => s + c.group.mem, 0);
+    const cpu = n.group ? n.group.cpu : n.children.reduce((s, c) => s + c.group.cpu, 0);
+    const count = n.group ? n.group.count : n.children.reduce((s, c) => s + c.group.count, 0);
+    return `<tr data-key="${esc(n.key)}"><td>${esc(n.name)}</td><td><span class="dot" style="background:${catVar(n.cat, "c")};border-radius: 5px"></span> ${CAT_LABEL[n.cat]}</td><td class="n">${count}</td><td class="n">${fmtBytes(mem)}</td><td class="n">${fmtPct(cpu)}</td><td>${status(n)}</td></tr>`;
+  }).join("");
+  $("table").innerHTML = `<thead>${head}</thead><tbody>${body}</tbody>`;
+  $("table").querySelectorAll("tbody tr").forEach(tr => {
+    const n = rows.find(r => r.key === tr.dataset.key);
+    if (n?.children?.length) tr.onclick = () => { state.path.push(n.key); renderExplorer(); };
+  });
+}
+
+function renderLegend() {
+  const hatch = `<span><span class="hs"></span>Selected for cleanup</span>`;
+  if (state.color === "cleanup") {
+    $("legend").innerHTML = `<span><span class="sw" style="background:var(--good-bg);border:1px solid var(--hatch-line)"></span>Safe to quit</span>
+      <span><span class="sw" style="background:var(--warn-bg);border:1px solid var(--warn)"></span>Review first</span>
+      <span><span class="sw" style="background:var(--f-system);border:1px solid var(--c-system)"></span>Keep running</span>${hatch}`;
+    return;
+  }
+  $("legend").innerHTML = CATS.map(c => `<span><span class="sw" style="background:${catVar(c.id, "c")}"></span>${c.label}</span>`).join("") + hatch;
+}
+
+function renderRecs() {
+  const all = state.data.recs;
+  const section = (key, title) => {
+    const list = all.filter(r => r.section === key);
+    const total = list.reduce((s, r) => s + r.mem, 0);
+    const rows = list.map(r => `
+      <div class="row" data-id="${esc(r.id)}">
+        <span class="check ${state.selected.has(r.id) ? "on" : ""}" data-toggle="${esc(r.id)}" role="checkbox" aria-checked="${state.selected.has(r.id)}"></span>
+        <div style="min-width:0"><div class="t">${esc(r.title)}</div><div class="s">${esc(r.path)}</div><div class="r">${esc(r.reason)}</div></div>
+        <div class="m">${fmtBytes(r.mem, 1)}<small>${fmtPct(r.cpu)} CPU</small></div>
+        <span class="chev">›</span>
+      </div>`).join("");
+    return `<div class="sec"><span class="tag ${key}">${title}</span><span class="tot">${fmtBytes(total, 1)}</span></div>
+      ${rows || `<div class="none">${key === "safe" ? "Nothing idle and large enough to suggest." : "No heavy apps or processes to flag."}</div>`}`;
+  };
+  $("recList").innerHTML = section("safe", "Safe to quit") + section("review", "Review first");
+  const sel = selectedRecs();
+  $("selSummary").innerHTML = `<b>${fmtBytes(sel.reduce((s, r) => s + r.mem, 0), 1)}</b> selected · ${sel.length} item${sel.length === 1 ? "" : "s"}`;
+  $("copyBtn").disabled = !sel.length;
+}
+
+function buildScript() {
+  const sel = selectedRecs();
+  const when = new Date(state.data.ts * 1000).toLocaleString();
+  const lines = ["#!/bin/zsh", `# Mac Pulse cleanup, built ${when}`, `# Frees about ${fmtBytes(sel.reduce((s, r) => s + r.mem, 0), 1)} across ${sel.length} item(s)`, ""];
+  for (const r of sel) {
+    lines.push(`# ${r.title}: ${fmtBytes(r.mem, 1)}, ${r.reason}`);
+    lines.push(r.command, "");
+  }
+  return lines.join("\n");
+}
+
+async function copyScript() {
+  const text = buildScript();
+  try {
+    await navigator.clipboard.writeText(text);
+    toast(`Copied a ${selectedRecs().length}-item script. Paste it into Terminal.`);
+  } catch {
+    $("modalText").value = text;
+    $("modal").style.display = "grid";
+    $("modalText").select();
+  }
+}
+
+function toast(msg) {
+  const t = $("toast");
+  t.textContent = msg; t.style.opacity = 1;
+  clearTimeout(toast.h); toast.h = setTimeout(() => (t.style.opacity = 0), 2200);
+}
+
+function focusRec(id) {
+  const r = recs.byId.get(id);
+  if (!r) return;
+  const g = state.data.groups.find(x => x.id === r.groupId);
+  if (!g) return;
+  state.path = [`cat:${g.cat}`, g.id];
+  if (state.view !== "map") setSeg("view", "map");
+  renderExplorer();
+  const key = r.pid ? `p${r.pid}` : null;
+  const el = key ? $("map").querySelector(`[data-key="${CSS.escape(key)}"]`) : $("map");
+  if (el && el !== $("map")) { el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash"); }
+}
+
+function tooltipHtml(node) {
+  if (node.more) {
+    const top = node.more.slice(0, 6).map(m => `<span>${esc(m.name)}</span><span>${fmtMetric(m.value, state.metric)}</span>`).join("");
+    return `<div class="tt">${esc(node.name)}</div><div class="kv">${top}</div>`;
+  }
+  if (node.catId) {
+    return `<div class="tt">${esc(node.name)}</div><div class="kv"><span>apps & tools</span><span>${node.children.length}</span><span>${state.metric === "mem" ? "memory" : "cpu"}</span><span>${fmtMetric(node.value, state.metric)}</span></div>`;
+  }
+  const rec = recFor(node);
+  const recLine = rec ? `<span>suggestion</span><span>${rec.section === "safe" ? "Safe to quit" : "Review first"}: ${esc(rec.reason)}</span>` : "";
+  if (node.proc) {
+    const p = node.proc;
+    return `<div class="tt">${esc(p.name)}</div><div class="kv">
+      <span>app</span><span>${esc(node.group.name)}</span><span>pid</span><span>${p.pid} (parent ${p.ppid})</span>
+      <span>memory</span><span>${fmtBytes(p.mem, 1)}</span><span>cpu</span><span>${fmtPct(p.cpu)}</span>
+      ${p.parentApp ? `<span>started by</span><span>${esc(p.parentApp)}</span>` : ""}${recLine}</div>
+      <div class="path">${esc(p.path)}</div>`;
+  }
+  const g = node.group;
+  return `<div class="tt">${esc(g.name)}</div><div class="kv">
+    <span>category</span><span>${CAT_LABEL[g.cat]}</span><span>processes</span><span>${g.count}</span>
+    <span>memory</span><span>${fmtBytes(g.mem, 1)}</span><span>cpu</span><span>${fmtPct(g.cpu)}</span>
+    ${g.protected ? `<span>note</span><span>runs this dashboard</span>` : ""}${recLine}</div>
+    ${g.bundle ? `<div class="path">${esc(g.bundle)}</div>` : ""}`;
+}
+
+function setSeg(key, v) {
+  state[key] = v;
+  document.querySelectorAll(`.seg[data-key="${key}"] button`).forEach(b => b.classList.toggle("on", b.dataset.v === v));
+}
+
+function renderAll() {
+  if (!state.data) return;
+  recs = recIndex();
+  syncSelection();
+  renderHeader();
+  renderKpis();
+  renderVitals();
+  renderExplorer();
+  renderRecs();
+}
+
+function bind() {
+  document.querySelectorAll(".seg").forEach(seg => seg.addEventListener("click", e => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    setSeg(seg.dataset.key, b.dataset.v);
+    renderExplorer();
+  }));
+
+  $("crumbs").addEventListener("click", e => {
+    const a = e.target.closest("a");
+    if (!a) return;
+    state.path = state.path.slice(0, Number(a.dataset.depth));
+    renderExplorer();
+  });
+
+  const map = $("map");
+  map.addEventListener("click", e => {
+    const hd = e.target.closest(".box > .hd");
+    const tile = e.target.closest(".tile:not(.ghost)");
+    const key = hd ? hd.dataset.key : tile && !tile.classList.contains("box") ? tile.dataset.key : null;
+    const node = key && tileIndex.get(key);
+    if (!node) return;
+    if (node.more) return;
+    if (!node.children?.length) return;
+    const tree = buildTree();
+    const { node: cur } = currentNode(tree);
+    if (cur.key === "root" && node.group) state.path = [`cat:${node.cat}`, node.key];
+    else state.path.push(node.key);
+    renderExplorer();
+  });
+
+  const tip = $("tip");
+  map.addEventListener("mousemove", e => {
+    const tile = e.target.closest(".tile:not(.ghost)");
+    const node = tile && tileIndex.get(tile.dataset.key);
+    if (!node) { tip.style.display = "none"; return; }
+    tip.innerHTML = tooltipHtml(node);
+    tip.style.display = "block";
+    const { innerWidth: W, innerHeight: H } = window;
+    const r = tip.getBoundingClientRect();
+    tip.style.left = `${Math.min(e.clientX + 14, W - r.width - 8)}px`;
+    tip.style.top = `${Math.min(e.clientY + 14, H - r.height - 8)}px`;
+  });
+  map.addEventListener("mouseleave", () => (tip.style.display = "none"));
+
+  $("vitals").addEventListener("mousemove", e => {
+    const svg = e.target.closest("svg.spark");
+    const card = e.target.closest(".vital");
+    card?.querySelector(".spark-read")?.remove();
+    if (!svg) return;
+    const vals = JSON.parse(svg.dataset.vals);
+    const box = svg.getBoundingClientRect();
+    const i = Math.round((e.clientX - box.left) / box.width * (vals.length - 1));
+    const h = state.data.history[i];
+    const read = document.createElement("div");
+    read.className = "spark-read";
+    read.textContent = `${vals[i]} · ${new Date(h.t * 1000).toLocaleTimeString()}`;
+    card.appendChild(read);
+  });
+  $("vitals").addEventListener("mouseleave", () => document.querySelectorAll(".spark-read").forEach(n => n.remove()));
+
+  $("recList").addEventListener("click", e => {
+    const toggle = e.target.closest("[data-toggle]");
+    if (toggle) {
+      const id = toggle.dataset.toggle;
+      state.selected.has(id) ? state.selected.delete(id) : state.selected.add(id);
+      state.auto.delete(id);
+      persist();
+      renderKpis(); renderRecs(); renderExplorer();
+      return;
+    }
+    const row = e.target.closest(".row");
+    if (row) focusRec(row.dataset.id);
+  });
+  $("selSafe").onclick = () => {
+    state.data.recs.forEach(r => r.section === "safe" ? state.selected.add(r.id) : state.selected.delete(r.id));
+    state.auto.clear();
+    persist(); renderKpis(); renderRecs(); renderExplorer();
+  };
+  $("selNone").onclick = () => { state.selected.clear(); state.auto.clear(); persist(); renderKpis(); renderRecs(); renderExplorer(); };
+  $("copyBtn").onclick = copyScript;
+  $("modalClose").onclick = () => ($("modal").style.display = "none");
+  $("liveBtn").onclick = () => { state.paused = !state.paused; renderHeader(); };
+  let resize;
+  window.addEventListener("resize", () => { clearTimeout(resize); resize = setTimeout(renderExplorer, 120); });
+}
+
+async function poll() {
+  if (!state.paused || !state.data) {
+    try {
+      const res = await fetch("/api/metrics", { cache: "no-store" });
+      if (res.ok) { state.data = await res.json(); renderAll(); }
+    } catch {}
+  }
+  setTimeout(poll, 2500);
+}
+
+bind();
+if (EMBEDDED) renderAll();
+else poll();
+</script>
+</body>
+</html>
