@@ -23,31 +23,45 @@ The right-hand list sorts apps and processes into two groups:
 
 macOS processes are never suggested, and neither is the app that launched Mac Pulse.
 
-**Copy script** builds a zsh script from what you ticked. Apps get a normal quit through `osascript`, the same as choosing Quit from the menu. Single processes get `kill`, guarded by a check that the process ID still belongs to the same program, so a reused ID can't take down something else. Nothing runs until you paste the script yourself.
+**Copy script** builds a zsh script from what you ticked. Apps get a normal quit through `osascript`, the same as choosing Quit from the menu. Single processes get `kill`, guarded by a check that the process ID still shows the same command name in `ps`, so a reused ID can't take down something else. Nothing runs until you paste the script yourself.
 
 ## Run it
 
-It needs only the Python 3 that ships with macOS. There are no dependencies to install.
+It needs macOS 13 or later and the Xcode Command Line Tools (`xcode-select --install`). There are no other dependencies.
 
 ```sh
-python3 macpulse.py                       # live view at http://127.0.0.1:8765, refreshes every 2.5 s
-python3 macpulse.py --snapshot out.html   # one self-contained HTML file of the current state
-python3 macpulse.py --port 9000 --interval 5 --no-open
+swift build -c release
+.build/release/macpulse                       # live view at http://127.0.0.1:8765, refreshes every 2.5 s
+.build/release/macpulse --snapshot out.html   # one self-contained HTML file of the current state
+.build/release/macpulse --port 9000 --interval 5 --no-open
 ```
 
+Keep the binary next to the `MacPulse_MacPulse.bundle` folder that `swift build` puts beside it, since the dashboard page ships inside that bundle.
+
 The server listens on 127.0.0.1 only. A snapshot file embeds your process list, hostname and app paths, so check it before you share one.
+
+## What it costs to leave running
+
+Measured on an M5 Pro with about 870 processes, sampling every 2.5 s: about 1% of one CPU core and 10 MB of memory, with or without the dashboard open. Every metric comes from a direct system call, so no sampling step starts another program. The first version was written in Python and ran `top`, `ps`, `ioreg` and friends on every sample, which cost about 29% of a core and 32 MB.
+
+## Processes owned by root
+
+macOS only lets a process read the memory and CPU time of processes owned by the same user. Run as yourself, Mac Pulse measures every app and tool you started and shows the rest (WindowServer, kernel_task and other root or system daemons) as one "Root & system processes" group. Its CPU is the total CPU load minus what your own processes used. Kernel and driver memory appears as its own tile, sized by wired memory. To measure every process one by one, run it with `sudo`.
 
 ## How it reads the numbers
 
 | Metric | Source |
 | --- | --- |
-| Per-process memory | `top` memory footprint, the figure Activity Monitor shows |
-| Per-process CPU | change in `ps` CPU time between samples (100% = one core) |
-| Per-core CPU | `host_processor_info` through `ctypes` |
-| Memory breakdown | `vm_stat`, `sysctl vm.swapusage`, `kern.memorystatus_vm_pressure_level` |
-| GPU | `ioreg` IOAccelerator performance statistics |
-| Disk and network | `ioreg` block storage counters, `netstat -ib` on `en*` interfaces |
-| Battery | `ioreg` AppleSmartBattery |
+| Process list, parents and owners | `sysctl` `KERN_PROC_ALL` |
+| Per-process memory | `proc_pid_rusage` physical footprint, the figure Activity Monitor shows |
+| Per-process CPU | change in `proc_pid_rusage` CPU time between samples (100% = one core) |
+| Per-core CPU | `host_processor_info` |
+| Memory breakdown | `host_statistics64`, `vm.swapusage`, `kern.memorystatus_vm_pressure_level` |
+| Thermal state | `ProcessInfo.thermalState` |
+| GPU | IOKit `IOAccelerator` performance statistics |
+| Disk | IOKit `IOBlockStorageDriver` counters, `statfs` on the data volume |
+| Network | `sysctl` `NET_RT_IFLIST2` 64-bit counters on `en*` interfaces |
+| Battery | IOKit `AppleSmartBattery` |
 
 Shared memory counts once for every process that maps it, so an app's total can read a little higher than its real share.
 

@@ -1,5 +1,4 @@
 snapshot*.html
-server.log
-server.pid
-__pycache__/
 .DS_Store
+.build/
+.swiftpm/

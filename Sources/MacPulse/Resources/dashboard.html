@@ -334,7 +334,7 @@ function selectedRecs() {
 function renderHeader() {
   const { host, procs, ts, live } = state.data;
   const perf = host.perf.map(p => `${p.count} ${p.name}`).join(" + ");
-  $("hostMeta").textContent = `${host.chip} · ${host.cores} cores (${perf}) · ${fmtBytes(state.data.mem.total)} · macOS ${host.os} · up ${fmtDuration(ts - host.boot)} · ${procs.count} processes · ${procs.threads.toLocaleString()} threads`;
+  $("hostMeta").textContent = `${host.chip} · ${host.cores} cores (${perf}) · ${fmtBytes(state.data.mem.total)} · macOS ${host.os} · up ${fmtDuration(ts - host.boot)} · ${procs.count} processes${procs.unmeasured ? ` (${procs.unmeasured} owned by root or system users, run with sudo to measure)` : ""}`;
   $("updated").textContent = new Date(ts * 1000).toLocaleTimeString();
   const btn = $("liveBtn");
   if (!live) {
@@ -362,7 +362,7 @@ function renderKpis() {
     <div class="kpi"><div class="label"><span class="dot" style="background:var(--warn)"></span>Needs review</div>
       <div class="value">${fmtBytes(sum(review), 1)}<small>${review.length} item${review.length === 1 ? "" : "s"}</small></div></div>
     <div class="kpi"><div class="label">macOS & kernel</div>
-      <div class="value">${fmtBytes(sysMem + mem.wired, 1)}<small>services + wired</small></div></div>`;
+      <div class="value">${fmtBytes(sysMem, 1)}<small>services + wired</small></div></div>`;
 }
 
 function spark(values, color, fmt) {
@@ -634,11 +634,11 @@ function renderTable(node) {
     return `<span class="tag ${r.section}">${r.section === "safe" ? "Safe to quit" : "Review"}</span>`;
   };
   const body = rows.map(n => {
-    if (n.proc) return `<tr data-key="${esc(n.key)}"><td>${esc(n.name)}</td><td class="n">${n.proc.pid}</td><td class="n">${fmtBytes(n.proc.mem)}</td><td class="n">${fmtPct(n.proc.cpu)}</td><td>${status(n)}</td></tr>`;
+    if (n.proc) return `<tr data-key="${esc(n.key)}"><td>${esc(n.name)}</td><td class="n">${n.proc.pid}</td><td class="n">${n.group.unmeasured ? "needs sudo" : fmtBytes(n.proc.mem)}</td><td class="n">${n.group.unmeasured ? "–" : fmtPct(n.proc.cpu)}</td><td>${status(n)}</td></tr>`;
     const mem = n.group ? n.group.mem : n.children.reduce((s, c) => s + c.group.mem, 0);
     const cpu = n.group ? n.group.cpu : n.children.reduce((s, c) => s + c.group.cpu, 0);
     const count = n.group ? n.group.count : n.children.reduce((s, c) => s + c.group.count, 0);
-    return `<tr data-key="${esc(n.key)}"><td>${esc(n.name)}</td><td><span class="dot" style="background:${catVar(n.cat, "c")};border-radius: 5px"></span> ${CAT_LABEL[n.cat]}</td><td class="n">${count}</td><td class="n">${fmtBytes(mem)}</td><td class="n">${fmtPct(cpu)}</td><td>${status(n)}</td></tr>`;
+    return `<tr data-key="${esc(n.key)}"><td>${esc(n.name)}</td><td><span class="dot" style="background:${catVar(n.cat, "c")};border-radius: 5px"></span> ${CAT_LABEL[n.cat]}</td><td class="n">${count}</td><td class="n">${n.group?.unmeasured ? "needs sudo" : fmtBytes(mem)}</td><td class="n">${fmtPct(cpu)}</td><td>${status(n)}</td></tr>`;
   }).join("");
   $("table").innerHTML = `<thead>${head}</thead><tbody>${body}</tbody>`;
   $("table").querySelectorAll("tbody tr").forEach(tr => {
@@ -742,7 +742,7 @@ function tooltipHtml(node) {
   const g = node.group;
   return `<div class="tt">${esc(g.name)}</div><div class="kv">
     <span>category</span><span>${CAT_LABEL[g.cat]}</span><span>processes</span><span>${g.count}</span>
-    <span>memory</span><span>${fmtBytes(g.mem, 1)}</span><span>cpu</span><span>${fmtPct(g.cpu)}</span>
+    <span>memory</span><span>${g.unmeasured ? "needs sudo to measure" : fmtBytes(g.mem, 1)}</span><span>cpu</span><span>${fmtPct(g.cpu)}</span>
     ${g.protected ? `<span>note</span><span>runs this dashboard</span>` : ""}${recLine}</div>
     ${g.bundle ? `<div class="path">${esc(g.bundle)}</div>` : ""}`;
 }
